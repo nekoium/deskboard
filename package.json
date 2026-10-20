@@ -1,0 +1,20 @@
+{
+  "name": "deskboard",
+  "version": "1.0.0",
+  "description": "A desktop vision board application",
+  "main": "main.js",
+  "scripts": {
+    "start": "electron .",
+    "dev": "electron . --dev"
+  },
+  "keywords": ["vision-board", "desktop", "electron"],
+  "author": "",
+  "license": "MIT",
+  "devDependencies": {
+    "electron": "^27.0.0"
+  },
+  "dependencies": {
+    "electron-store": "^8.1.0",
+    "auto-launch": "^5.0.6"
+  }
+}
