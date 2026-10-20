@@ -46,6 +46,8 @@
     "files": [
       "main.js",
       "preload.js",
+      "desktop-layer.js",
+      "set-desktop-parent.ps1",
       "src/**/*",
       "build/icon.png",
       "package.json"

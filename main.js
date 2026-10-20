@@ -3,6 +3,7 @@ const path = require('path');
 const fs = require('fs');
 const Store = require('electron-store');
 const AutoLaunch = require('auto-launch');
+const { setWindowBehindDesktopIcons } = require('./desktop-layer');
 
 let uIOhook = null;
 let UiohookKey = null;
@@ -63,9 +64,17 @@ function createBoardWindow() {
 
   boardWindow.loadFile('src/board.html');
   
-  // Try to place below desktop icons (Windows Explorer layer)
-  // Note: This may not work on all systems due to OS limitations
-  boardWindow.setAlwaysOnTop(false, 'normal', -1);
+  // Wait for window to be ready, then place behind desktop icons
+  boardWindow.webContents.on('did-finish-load', () => {
+    // Use the WorkerW technique to place window behind desktop icons
+    const success = setWindowBehindDesktopIcons(boardWindow);
+    if (!success) {
+      console.warn('Failed to place window behind desktop icons, using fallback z-order');
+      // Fallback: try to go as low as possible in z-order
+      boardWindow.setAlwaysOnTop(false, 'normal', -1);
+    }
+  });
+  
   boardWindow.setVisibleOnAllWorkspaces(true, { visibleOnFullScreen: true });
   
   // Start in click-through mode
@@ -93,11 +102,12 @@ function setEditMode(enabled) {
     boardWindow.webContents.send('toggle-edit-mode', isEditMode);
     
     if (isEditMode) {
-      // Bring to normal level in edit mode so we can interact
+      // In edit mode, bring window to normal level so user can interact
+      // We need to temporarily unparent from WorkerW
       boardWindow.setAlwaysOnTop(false, 'normal');
     } else {
-      // Try to go back below desktop icons
-      boardWindow.setAlwaysOnTop(false, 'normal', -1);
+      // Exit edit mode - re-apply desktop layer placement
+      setWindowBehindDesktopIcons(boardWindow);
       boardWindow.blur();
     }
   }
