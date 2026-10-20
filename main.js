@@ -185,7 +185,17 @@ function createTray() {
       label: 'Quit',
       click: () => {
         isQuitting = true;
-        app.quit();
+        
+        // Close all windows first
+        if (settingsWindow) {
+          settingsWindow.destroy();
+        }
+        if (boardWindow) {
+          boardWindow.destroy();
+        }
+        
+        // Force quit
+        app.exit(0);
       },
     },
   ]);
