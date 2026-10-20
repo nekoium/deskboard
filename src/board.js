@@ -9,6 +9,9 @@ let dragStartImagePos = { x: 0, y: 0 };
 let resizeStartSize = { width: 0, height: 0 };
 let rotateStartAngle = 0;
 let contextMenu = null;
+let undoStack = [];
+let redoStack = [];
+const MAX_UNDO_STACK = 50;
 
 const overlay = document.getElementById('overlay');
 const board = document.getElementById('board');
@@ -72,26 +75,67 @@ async function init() {
       file.type.startsWith('image/')
     );
 
-    for (const file of files) {
-      // Copy file to images directory
-      const filename = await window.api.copyImageFile(file.path);
-      
-      const newImage = {
-        id: Date.now() + Math.random(),
-        filename: filename,
-        x: e.clientX - 150,
-        y: e.clientY - 150,
-        width: 300,
-        height: 300,
-        rotation: 0,
-      };
-      
-      images.push(newImage);
-      await renderImages();
-      saveBoard();
-      
-      // Wait a bit between files to ensure unique IDs
-      await new Promise(resolve => setTimeout(resolve, 10));
+    // Handle file drops
+    if (files.length > 0) {
+      pushUndoState();
+      for (const file of files) {
+        // Copy file to images directory
+        const filename = await window.api.copyImageFile(file.path);
+        
+        const newImage = {
+          id: Date.now() + Math.random(),
+          filename: filename,
+          x: e.clientX - 150,
+          y: e.clientY - 150,
+          width: 300,
+          height: 300,
+          rotation: 0,
+        };
+        
+        images.push(newImage);
+        await renderImages();
+        saveBoard();
+        
+        // Wait a bit between files to ensure unique IDs
+        await new Promise(resolve => setTimeout(resolve, 10));
+      }
+      return;
+    }
+
+    // Handle dragging an opened image element (img src or data URL)
+    const imageUrl = e.dataTransfer.getData('text/uri-list') || e.dataTransfer.getData('text/html');
+    if (imageUrl) {
+      try {
+        // Extract src from HTML if needed
+        let srcUrl = imageUrl;
+        if (imageUrl.includes('<img')) {
+          const match = imageUrl.match(/src=["']([^"']+)["']/);
+          if (match) srcUrl = match[1];
+        }
+
+        // If it's a local file path, use it directly
+        if (srcUrl.startsWith('file://') || srcUrl.includes('\\') || srcUrl.includes('/')) {
+          const filePath = srcUrl.replace('file:///', '').replace('file://', '');
+          pushUndoState();
+          const filename = await window.api.copyImageFile(filePath);
+          
+          const newImage = {
+            id: Date.now() + Math.random(),
+            filename: filename,
+            x: e.clientX - 150,
+            y: e.clientY - 150,
+            width: 300,
+            height: 300,
+            rotation: 0,
+          };
+          
+          images.push(newImage);
+          await renderImages();
+          saveBoard();
+        }
+      } catch (error) {
+        console.error('Failed to handle image drop:', error);
+      }
     }
   });
 
@@ -99,20 +143,28 @@ async function init() {
   document.addEventListener('keydown', (e) => {
     if (!isEditMode) return;
     
-    if (e.key === 'Delete' && selectedImage) {
-      removeImage(selectedImage);
-    } else if (e.key === 'Escape') {
+    // Only keep Escape to exit edit mode
+    if (e.key === 'Escape') {
       deselectImage();
       hideContextMenu();
     }
   });
 
-  // Click on empty space to deselect
+  // Click on empty space to deselect and show context menu
   board.addEventListener('mousedown', (e) => {
     if (!isEditMode) return;
     if (e.target === board) {
       deselectImage();
       hideContextMenu();
+    }
+  });
+
+  // Right-click on empty space for board context menu
+  board.addEventListener('contextmenu', (e) => {
+    if (!isEditMode) return;
+    if (e.target === board || e.target === overlay) {
+      e.preventDefault();
+      showBoardContextMenu(e.clientX, e.clientY);
     }
   });
 
@@ -207,6 +259,7 @@ function handleDragEnd() {
     isDragging = false;
     document.removeEventListener('mousemove', handleDrag);
     document.removeEventListener('mouseup', handleDragEnd);
+    pushUndoState();
     saveBoard();
   }
 }
@@ -241,6 +294,7 @@ function handleResizeEnd() {
     isResizing = false;
     document.removeEventListener('mousemove', handleResize);
     document.removeEventListener('mouseup', handleResizeEnd);
+    pushUndoState();
     saveBoard();
   }
 }
@@ -287,6 +341,7 @@ function handleRotateEnd() {
     isRotating = false;
     document.removeEventListener('mousemove', handleRotate);
     document.removeEventListener('mouseup', handleRotateEnd);
+    pushUndoState();
     saveBoard();
   }
 }
@@ -307,17 +362,63 @@ function showContextMenu(x, y, image) {
   contextMenu.style.top = `${y}px`;
 
   const items = [
-    { label: 'Remove', action: () => removeImage(image) },
+    { label: 'Remove', action: () => { pushUndoState(); removeImage(image); } },
+    { label: '—', divider: true },
+    { label: 'Undo', action: () => undo(), disabled: undoStack.length === 0 },
+    { label: 'Redo', action: () => redo(), disabled: redoStack.length === 0 },
+  ];
+
+  items.forEach(item => {
+    if (item.divider) {
+      const divider = document.createElement('hr');
+      divider.className = 'context-menu-divider';
+      contextMenu.appendChild(divider);
+    } else {
+      const menuItem = document.createElement('div');
+      menuItem.className = 'context-menu-item';
+      if (item.disabled) {
+        menuItem.classList.add('disabled');
+      }
+      menuItem.textContent = item.label;
+      if (!item.disabled) {
+        menuItem.addEventListener('click', () => {
+          item.action();
+          hideContextMenu();
+        });
+      }
+      contextMenu.appendChild(menuItem);
+    }
+  });
+
+  document.body.appendChild(contextMenu);
+}
+
+function showBoardContextMenu(x, y) {
+  hideContextMenu();
+
+  contextMenu = document.createElement('div');
+  contextMenu.className = 'context-menu';
+  contextMenu.style.left = `${x}px`;
+  contextMenu.style.top = `${y}px`;
+
+  const items = [
+    { label: 'Undo', action: () => undo(), disabled: undoStack.length === 0 },
+    { label: 'Redo', action: () => redo(), disabled: redoStack.length === 0 },
   ];
 
   items.forEach(item => {
     const menuItem = document.createElement('div');
     menuItem.className = 'context-menu-item';
+    if (item.disabled) {
+      menuItem.classList.add('disabled');
+    }
     menuItem.textContent = item.label;
-    menuItem.addEventListener('click', () => {
-      item.action();
-      hideContextMenu();
-    });
+    if (!item.disabled) {
+      menuItem.addEventListener('click', () => {
+        item.action();
+        hideContextMenu();
+      });
+    }
     contextMenu.appendChild(menuItem);
   });
 
@@ -373,6 +474,52 @@ function updateInteractivity() {
 
 async function saveBoard() {
   await window.api.saveBoardData({ images });
+}
+
+function pushUndoState() {
+  // Deep clone the current images array
+  const state = JSON.parse(JSON.stringify(images));
+  undoStack.push(state);
+  
+  // Limit stack size
+  if (undoStack.length > MAX_UNDO_STACK) {
+    undoStack.shift();
+  }
+  
+  // Clear redo stack when a new action is performed
+  redoStack = [];
+}
+
+async function undo() {
+  if (undoStack.length === 0) return;
+  
+  // Save current state to redo stack
+  const currentState = JSON.parse(JSON.stringify(images));
+  redoStack.push(currentState);
+  
+  // Restore previous state
+  const previousState = undoStack.pop();
+  images = JSON.parse(JSON.stringify(previousState));
+  
+  selectedImage = null;
+  await renderImages();
+  saveBoard();
+}
+
+async function redo() {
+  if (redoStack.length === 0) return;
+  
+  // Save current state to undo stack
+  const currentState = JSON.parse(JSON.stringify(images));
+  undoStack.push(currentState);
+  
+  // Restore next state
+  const nextState = redoStack.pop();
+  images = JSON.parse(JSON.stringify(nextState));
+  
+  selectedImage = null;
+  await renderImages();
+  saveBoard();
 }
 
 // Start the app

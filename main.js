@@ -21,6 +21,7 @@ let holdShortcutDown = false;
 let holdReleaseKeycodes = null;
 let inputHookStarted = false;
 let inputHookListenerAdded = false;
+let isQuitting = false;
 
 const autoLauncher = new AutoLaunch({
   name: 'Deskboard',
@@ -183,6 +184,7 @@ function createTray() {
     {
       label: 'Quit',
       click: () => {
+        isQuitting = true;
         app.quit();
       },
     },
@@ -388,7 +390,9 @@ app.whenReady().then(() => {
 });
 
 app.on('window-all-closed', (e) => {
-  e.preventDefault();
+  if (!isQuitting) {
+    e.preventDefault();
+  }
 });
 
 app.on('will-quit', () => {

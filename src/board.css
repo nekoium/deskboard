@@ -114,6 +114,22 @@ body {
   background: #f0f0f0;
 }
 
+.context-menu-item.disabled {
+  color: #999;
+  cursor: default;
+}
+
+.context-menu-item.disabled:hover {
+  background: transparent;
+}
+
+.context-menu-divider {
+  height: 1px;
+  background: #e0e0e0;
+  margin: 4px 0;
+  border: none;
+}
+
 .context-menu-separator {
   height: 1px;
   background: #e0e0e0;

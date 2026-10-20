@@ -79,5 +79,8 @@
       "repo": "deskboard",
       "releaseType": "draft"
     }
+  },
+  "allowScripts": {
+    "active-win@8.2.1": true
   }
 }
