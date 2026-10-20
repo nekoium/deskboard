@@ -1,133 +1,88 @@
 # Deskboard — Product Spec
 
-A quiet tray app that turns your desktop into a vision and note board, layered between  
-the wallpaper and the desktop icons. This document is the source of truth for  
-the intended user experience.
+A tray application that displays images on the desktop layer, behind icons but above the wallpaper. The board stays click-through during normal use and becomes interactive when the user enters edit mode.
 
-## Core loop
+## User experience
 
-1. **Display mode (default).** The board lives on the desktop layer, invisible
- to the mouse: icons, drag-and-drop, and right-click on the desktop work
- exactly as if the board were not there.
-2. **Edit mode — press and hold the trigger key (default `Caps Lock`).**
- Trigger handling runs through two gates:
+### Normal use
 
-   **Gate 1 - is edit even armed?** Only in the designed scenarios: the
-    desktop shell has focus, OR the cursor is over the desktop band (e.g.
-    dragging an image to the desktop). Anywhere else the key is never
-    captured and behaves completely normally.
+The board displays images on the desktop. Desktop icons, file operations, and right-click context menus work normally. Clicks pass through the board to the desktop below.
 
-    **Gate 2 - is it held long enough (0.4 s from the first key-down)?**
-   - **Short tap** (key-up first) — the key behaves completely normally:
-   the capital-lock state toggles, the board never reacts. Rapid tapping
-   restarts the session each press, so taps can never accumulate into a
-   hold.
-   - **Hold confirmed (while held):**
-     - The board floats **above the desktop (wallpaper + icons) but below
-     every normal window**. It never covers or blocks the user's apps,
-     never steals focus, and never takes the keyboard: typing in the
-     current app continues undisturbed.
-     - Clicks and drags on empty desktop areas reach the board; the user's
-     windows above keep working normally.
-     - A **half-transparent white wash** covers the desktop background —
-     images on the board stay fully opaque (macOS-dashboard style). A
-     frosted hint pill appears at the bottom of the screen.
-     - The capital-lock state must **never** toggle while editing; the key
-     is consumed globally.
+### Edit mode
 
-    Each physical press is handled as a **session**: it opens with the first
-    captured key-down, the decision is invalidated and restarted by rapid
-    re-presses, and once decided, stray key-ups are swallowed instead of
-    replayed — so keyboard interceptors can neither make the board flash
-    on/off nor leak a hold through as a Caps Lock press.
+The user activates edit mode with a keyboard shortcut. While editing:
 
-    **Release detection** (in order): a seen key-up exits instantly; a new
-    Caps press while editing (≥ 0.6 s after the last event) exits explicitly;
-    prolonged silence plus async-state agreement is the last fallback. On
-    normal machines the key-up path always wins; the explicit taps are a
-    working fallback for machines whose keyboard interceptors eat key-ups
-    and stop auto-repeats mid-hold. Foreign injected trigger events are
-    swallowed (the app is the gatekeeper of the trigger key), so synthetic
-    Caps pairs from remappers can never toggle the capital state.
-3. **Release the trigger key.** The board saves immediately and re-embeds into
- the desktop layer, click-through again.
+- A semi-transparent white overlay appears over the desktop background. Images remain fully opaque.
+- The board becomes interactive and accepts clicks and drags.
+- Normal application windows stay above the board.
+- The board does not steal focus. Typing in other applications continues to work.
+- The user can move, resize, rotate, and remove images.
 
-### Mode transition (design)
+Leaving edit mode saves changes and returns to click-through display mode.
 
-The display-to-edit switch reads as a single visual change - transparent
-background to white wash and back. The window is hidden for the few
-milliseconds of the layer restructure (hide -&gt; restructure -&gt;
-show-without-activation), so it never paints a half-applied state: no
-"jumping", no window-frame flash, no flicker. The wash fades in over 180 ms
-while the board reappears.
+### Trigger behavior
 
-### Non-intrusive rules (hard requirements)
+The keyboard shortcut is configurable. It must not produce an unintended system action when pressed.
 
-- The app never shows windows above the user's normal windows; its only
-surfaces are the desktop layer, the tray, and the Settings window.
-- The trigger is armed **only when the desktop shell is the foreground
-surface**. While any normal window is focused, the trigger key behaves
-completely normally - the app never reacts to it.
-- The board window becomes visible only after its UI actually loaded — a
-failed webview load can never cover the desktop with a blank page.
-- While editing, only the trigger key and Delete/Escape (for the selected
-image) are consumed; every other keystroke passes through untouched.
+## Safety requirements
 
-## Editing (edit mode)
+- Deskboard must not modify the desktop environment in a way that persists after exit.
+- Closing or crashing must leave the wallpaper, icons, taskbar, and keyboard state unchanged.
+- A failed load must remain invisible.
+- Normal application windows must always stay above the board.
+- The display window must remain click-through outside edit mode.
 
-- **Move** — drag an image.
-- **Select** — click an image; handles appear.
-- **Resize** — drag corner/edge handles; **aspect ratio is locked**.
-- **Rotate** — drag the rotate handle; rotation **snaps to 0/90/180/270**
-when close (quality-of-life).
-- **Delete** — select + press `Delete` (captured only while editing).
-- **Deselect** — click empty board space.
+## Features
 
-There is no right-click context menu in edit mode.
+### Image management
 
-## Adding images
+- Add images via drag-and-drop or tray menu
+- Move by dragging
+- Resize with aspect ratio locked
+- Rotate with handles (snaps to 0/90/180/270 degrees)
+- Remove selected images with Delete key
+- Images are copied to local storage and do not break when the original file moves
 
-- **Drag &amp; drop** — while edit mode is active, drag image files from Explorer  
-(or drop an image from an image viewer) onto the desktop area; they land on  
-the board, not the desktop folder. Dropping while in display mode is left  
-to the OS (normal desktop behavior).
-- **Tray → Add Image…** — opens a file picker.
+### Editing interactions
 
-Imported files are **copied into the app's asset cache**, so the board never
-breaks when the original file moves or is deleted.
+- Click to select (handles appear)
+- Click empty space to deselect
+- Right-click menu: copy, save as, reset aspect ratio, remove
 
-## Tray (the only UI surface besides editing)
+## Interface
 
-- **Add Image…**
-- **Settings…**
-- **Quit**
+### Tray menu
 
-There is deliberately **no** edit-mode toggle in the tray: edit mode is
-momentary by design (hold the trigger key).
+- Add Image…
+- Settings…
+- Quit
 
-## Settings page
+### Settings window
 
-Opened from the tray as a small normal window:
-
-- **Edit trigger key** — dropdown: Caps Lock (default), Insert,
-Scroll Lock, F4. Some systems remap Caps Lock (HID tools, IMEs) so it
-never reaches apps; the dropdown lets users pick a key that works.
-Changes apply immediately and persist.
-- **Launch at login** — toggle (OS autostart).
-- **Data folder** — button that opens the app-data folder in the file manager.
-- **Version** — read-only.
-
-Closing the window hides it; state is kept.
+- Configure keyboard shortcut for edit mode
+- Launch at login
+- Open data folder
+- Version display
 
 ## Persistence
 
-- Element state: `canvas.json` in the OS app-data directory
-(Windows: `%APPDATA%\dev.nekoium.deskboard`).
-- Trigger key: `settings.json` next to it.
-- Image cache: `assets/` next to it; orphaned files are removed on save.
-- Debounced autosave while editing; immediate save on leaving edit mode.
+- Board state and settings saved to local application data directory
+- Images copied to local cache
+- Autosave while editing
+- Immediate save on exit
 
-## Non-goals (for now)
+## Scope
 
-- Text/sticky notes, boards with multiple pages, cloud sync, per-board
-settings, multi-monitor layouts, z-order UI.
+### MVP (first version)
+
+- Images only
+- Single board
+- Primary monitor
+- Local storage
+
+### Future
+
+- Text notes
+- Multiple boards
+- Multiple monitors
+- Cloud sync
