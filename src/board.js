@@ -17,10 +17,10 @@ const board = document.getElementById('board');
 async function init() {
   const data = await window.api.getBoardData();
   images = data.images || [];
-  renderImages();
+  await renderImages();
 
   // Listen for edit mode toggle
-  window.api.onToggleEditMode((editMode) => {
+  window.api.onToggleEditMode(async (editMode) => {
     isEditMode = editMode;
     overlay.classList.toggle('edit-mode', editMode);
     
@@ -29,6 +29,7 @@ async function init() {
       hideContextMenu();
     }
     
+    await renderImages();
     updateInteractivity();
   });
 
@@ -47,7 +48,7 @@ async function init() {
     };
     
     images.push(newImage);
-    renderImages();
+    await renderImages();
     saveBoard();
   });
 
@@ -86,7 +87,7 @@ async function init() {
       };
       
       images.push(newImage);
-      renderImages();
+      await renderImages();
       saveBoard();
       
       // Wait a bit between files to ensure unique IDs
@@ -123,13 +124,13 @@ async function init() {
   });
 }
 
-function renderImages() {
+async function renderImages() {
   board.innerHTML = '';
   
-  images.forEach(image => {
-    const container = createImageElement(image);
+  for (const image of images) {
+    const container = await createImageElement(image);
     board.appendChild(container);
-  });
+  }
 }
 
 async function createImageElement(image) {
@@ -330,14 +331,14 @@ function hideContextMenu() {
   }
 }
 
-function selectImage(image) {
+async function selectImage(image) {
   selectedImage = image;
-  renderImages();
+  await renderImages();
 }
 
-function deselectImage() {
+async function deselectImage() {
   selectedImage = null;
-  renderImages();
+  await renderImages();
 }
 
 function updateImageElement(image) {
@@ -355,7 +356,7 @@ async function removeImage(image) {
   images = images.filter(img => img.id !== image.id);
   await window.api.deleteImage(image.filename);
   selectedImage = null;
-  renderImages();
+  await renderImages();
   saveBoard();
 }
 
