@@ -4,6 +4,7 @@ let recordingShortcut = false;
 
 const shortcutInput = document.getElementById('shortcut-input');
 const currentShortcutSpan = document.getElementById('current-shortcut');
+const holdModeCheckbox = document.getElementById('hold-mode');
 const launchAtLoginCheckbox = document.getElementById('launch-at-login');
 const versionSpan = document.getElementById('version');
 const openDataFolderButton = document.getElementById('open-data-folder');
@@ -15,6 +16,7 @@ async function init() {
   
   shortcutInput.value = '';
   currentShortcutSpan.textContent = currentSettings.shortcut;
+  holdModeCheckbox.checked = currentSettings.holdMode || false;
   launchAtLoginCheckbox.checked = currentSettings.launchAtLogin;
   versionSpan.textContent = currentSettings.version;
   
@@ -81,6 +83,7 @@ saveButton.addEventListener('click', async () => {
   const settings = {
     shortcut: newShortcut || currentSettings.shortcut,
     launchAtLogin: launchAtLoginCheckbox.checked,
+    holdMode: holdModeCheckbox.checked,
   };
   
   await window.api.saveSettings(settings);

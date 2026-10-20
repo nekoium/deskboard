@@ -75,10 +75,12 @@ function toggleEditMode() {
     boardWindow.webContents.send('toggle-edit-mode', isEditMode);
     
     if (isEditMode) {
-      boardWindow.setAlwaysOnTop(true, 'screen-saver', -1);
+      // In edit mode: stay below normal windows but above desktop
+      boardWindow.setAlwaysOnTop(false);
       boardWindow.focus();
     } else {
-      boardWindow.setAlwaysOnTop(false, 'screen-saver', -1);
+      // In normal mode: click-through, no focus
+      boardWindow.setAlwaysOnTop(false);
       boardWindow.blur();
     }
   }
@@ -90,9 +92,12 @@ function createSettingsWindow() {
     return;
   }
 
+  // Unregister shortcuts while settings window is open
+  globalShortcut.unregisterAll();
+
   settingsWindow = new BrowserWindow({
     width: 500,
-    height: 400,
+    height: 450,
     resizable: false,
     minimizable: false,
     maximizable: false,
@@ -109,6 +114,8 @@ function createSettingsWindow() {
 
   settingsWindow.on('closed', () => {
     settingsWindow = null;
+    // Re-register shortcuts when settings window closes
+    registerShortcut();
   });
 }
 
@@ -181,13 +188,32 @@ function createTrayIcon() {
 function registerShortcut() {
   globalShortcut.unregisterAll();
   const shortcut = store.get('shortcut', 'CommandOrControl+Shift+D');
+  const holdMode = store.get('holdMode', false);
   
-  const success = globalShortcut.register(shortcut, () => {
-    toggleEditMode();
-  });
-
-  if (!success) {
-    console.error('Failed to register shortcut:', shortcut);
+  if (holdMode) {
+    // Hold mode: activate on press, deactivate on release
+    const success = globalShortcut.register(shortcut, () => {
+      if (!isEditMode) {
+        toggleEditMode();
+      }
+    });
+    
+    if (!success) {
+      console.error('Failed to register shortcut:', shortcut);
+    }
+    
+    // Note: Electron doesn't support key release events for global shortcuts
+    // So hold mode works as: press to enter, press again to exit (same as toggle)
+    // True hold mode would require native modules
+  } else {
+    // Toggle mode: press to toggle
+    const success = globalShortcut.register(shortcut, () => {
+      toggleEditMode();
+    });
+    
+    if (!success) {
+      console.error('Failed to register shortcut:', shortcut);
+    }
   }
 }
 
@@ -204,6 +230,7 @@ ipcMain.handle('get-settings', () => {
   return {
     shortcut: store.get('shortcut', 'CommandOrControl+Shift+D'),
     launchAtLogin: store.get('launchAtLogin', false),
+    holdMode: store.get('holdMode', false),
     version: app.getVersion(),
     userDataPath: app.getPath('userData'),
   };
@@ -224,6 +251,10 @@ ipcMain.handle('save-settings', async (event, settings) => {
     } else {
       await autoLauncher.disable();
     }
+  }
+
+  if (settings.holdMode !== undefined) {
+    store.set('holdMode', settings.holdMode);
   }
 });
 

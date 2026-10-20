@@ -10,11 +10,16 @@ Your vision board displays images on the desktop throughout your workday. Deskto
 
 ### Edit mode
 
-The user activates edit mode with a keyboard shortcut. While editing:
+The user activates edit mode with a keyboard shortcut. The shortcut can work in two modes:
+
+**Toggle mode (default)**: Press once to enter edit mode, press again to exit.
+**Hold mode**: Hold the keys to edit, release to exit (note: currently behaves like toggle due to Electron limitations).
+
+While editing:
 
 - A semi-transparent white overlay appears over the desktop background. Images remain fully opaque.
 - The board becomes interactive and accepts clicks and drags.
-- Normal application windows stay above the board.
+- The board stays below normal application windows, so you can reference other apps while editing.
 - The board does not steal focus. Typing in other applications continues to work.
 - The user can move, resize, rotate, and remove images.
 
@@ -60,6 +65,7 @@ The keyboard shortcut is configurable. It must not produce an unintended system 
 ### Settings window
 
 - Configure keyboard shortcut for edit mode
+- Choose between toggle mode (default) or hold mode
 - Launch at login
 - Open data folder
 - Version display

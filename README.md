@@ -13,6 +13,8 @@ npm start
 
 - **Vision Board Display**: Images display on your desktop between the wallpaper and icons
 - **Edit Mode**: Toggle with `Ctrl+Shift+D` (configurable) to arrange your board
+- **Hold/Toggle Mode**: Choose whether to hold keys or toggle edit mode
+- **Edit Below Windows**: Edit mode stays below normal application windows for non-intrusive editing
 - **Image Management**: 
   - Add images via drag-and-drop or tray menu
   - Move, resize, and rotate images

@@ -71,6 +71,10 @@ input[type="text"]:focus {
   user-select: none;
 }
 
+.section .checkbox-label {
+  margin-top: 12px;
+}
+
 .checkbox-label input[type="checkbox"] {
   margin-right: 10px;
   width: 18px;

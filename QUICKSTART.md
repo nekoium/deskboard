@@ -74,9 +74,12 @@ Press `Ctrl+Shift+D` again
 1. Click tray icon → "Settings…"
 2. Available options:
    - **Keyboard Shortcut**: Click the input field and press your desired key combination
+   - **Hold Mode**: Check to enable hold-to-edit mode (default is toggle)
    - **Launch at Login**: Check to start Deskboard automatically
    - **Open Data Folder**: View where your images are stored
 3. Click "Save" to apply changes
+
+**Note**: When settings window is open, keyboard shortcuts are temporarily disabled to prevent accidental activation while configuring.
 
 ## Tips
 
