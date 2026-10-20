@@ -401,6 +401,7 @@ app.on('will-quit', () => {
 });
 
 app.on('before-quit', () => {
+  isQuitting = true;
   if (boardWindow) {
     boardWindow.webContents.send('save-before-quit');
   }
