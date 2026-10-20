@@ -1,6 +1,24 @@
 # Deskboard
 
-A desktop vision board application that lives on your desktop layer — behind icons, above your wallpaper.
+A desktop vision board that stays visible without getting in your way.
+
+## Why Deskboard?
+
+Vision boards work because they keep your goals visible. But traditional digital vision boards have a problem:
+
+- **Out of sight, out of mind**: If your vision board lives in an app you need to open, you'll forget to look at it
+- **Motivation fades**: Taking active effort to check your vision board makes it easy to lose the habit
+- **Wrong placement kills effectiveness**: A vision board needs to be somewhere you see constantly and frequently
+- **But intrusive = annoying**: If it disrupts your workflow, you'll disable it
+
+Deskboard solves this by living at the desktop layer - **always visible, never intrusive**:
+
+✅ **Always there** - Sits on your desktop between your wallpaper and icons  
+✅ **Passive visibility** - You see it every time you reach your desktop  
+✅ **Never blocks** - Normal windows stay above it; click-through when not editing  
+✅ **Zero friction** - No need to open an app or take any action to see your goals
+
+Your vision board becomes part of your digital environment, working in the background of your consciousness.
 
 ## Install
 

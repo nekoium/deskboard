@@ -62,7 +62,10 @@ function createBoardWindow() {
   });
 
   boardWindow.loadFile('src/board.html');
-  boardWindow.setAlwaysOnTop(false, 'screen-saver', -1);
+  
+  // Try to place below desktop icons (Windows Explorer layer)
+  // Note: This may not work on all systems due to OS limitations
+  boardWindow.setAlwaysOnTop(false, 'normal', -1);
   boardWindow.setVisibleOnAllWorkspaces(true, { visibleOnFullScreen: true });
   
   // Start in click-through mode
@@ -88,9 +91,13 @@ function setEditMode(enabled) {
   if (boardWindow) {
     boardWindow.setIgnoreMouseEvents(!isEditMode, { forward: true });
     boardWindow.webContents.send('toggle-edit-mode', isEditMode);
-    boardWindow.setAlwaysOnTop(false);
-
-    if (!isEditMode) {
+    
+    if (isEditMode) {
+      // Bring to normal level in edit mode so we can interact
+      boardWindow.setAlwaysOnTop(false, 'normal');
+    } else {
+      // Try to go back below desktop icons
+      boardWindow.setAlwaysOnTop(false, 'normal', -1);
       boardWindow.blur();
     }
   }
