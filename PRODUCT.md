@@ -13,7 +13,7 @@ Your vision board displays images on the desktop throughout your workday. Deskto
 The user activates edit mode with a keyboard shortcut. The shortcut can work in two modes:
 
 **Toggle mode (default)**: Press once to enter edit mode, press again to exit.
-**Hold mode**: Hold the keys to edit, release to exit (note: currently behaves like toggle due to Electron limitations).
+**Hold mode**: Hold the keys to edit, then release any key in the shortcut to exit.
 
 While editing:
 

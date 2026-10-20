@@ -2,7 +2,11 @@
 
 A desktop vision board application that lives on your desktop layer — behind icons, above your wallpaper.
 
-## Quick Start
+## Install
+
+Download the Windows installer from [GitHub Releases](https://github.com/nekoium/deskboard/releases). Windows may show a SmartScreen warning because the MVP installer is not code-signed.
+
+To run from source:
 
 ```bash
 npm install
@@ -32,6 +36,11 @@ npm start
 
 ### Edit Mode
 
+The shortcut supports two behaviors:
+
+- **Toggle** (default): press once to enter edit mode and again to leave.
+- **Hold**: hold the shortcut to edit and release it to leave.
+
 Press `Ctrl+Shift+D` (or your configured shortcut) to:
 - Move images by dragging
 - Resize with the blue handle (bottom-right corner)
@@ -44,7 +53,7 @@ Press the shortcut again to exit edit mode.
 ### Settings
 
 Access via tray icon → "Settings…":
-- Configure keyboard shortcut
+- Configure the keyboard shortcut and choose hold or toggle behavior
 - Enable launch at login
 - Open data folder
 - View version
@@ -63,8 +72,25 @@ Images are stored in the application data directory and persist across sessions.
 ## Development
 
 ```bash
+npm install
 npm start
 ```
+
+Create a local Windows installer and ZIP archive in `release/`:
+
+```bash
+npm run dist
+```
+
+## Publishing a release
+
+1. Update `version` in `package.json` and `package-lock.json` with `npm version <version> --no-git-tag-version`.
+2. Commit and push the version change.
+3. Tag that commit with the matching `v`-prefixed tag, for example `git tag v0.1.0`.
+4. Push the tag with `git push origin v0.1.0`.
+5. The release workflow builds Windows artifacts and creates a **draft** GitHub release. Review its notes and publish it from GitHub.
+
+Do not reuse or move a published version tag. Increment the version for every release.
 
 ## Safety
 

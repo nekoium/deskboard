@@ -213,11 +213,11 @@ npm start
 5. Contribute enhancements
 
 ### For Distribution
-1. Add proper application icon
-2. Set up electron-builder
-3. Configure code signing
-4. Create installers (Windows/macOS/Linux)
-5. Publish releases
+1. Run `npm run dist` to verify the Windows installer and ZIP locally
+2. Update and commit the package version
+3. Push the matching `v`-prefixed tag
+4. Review the draft GitHub release created by Actions
+5. Add code signing before a wider distribution
 
 ## Documentation
 
@@ -250,5 +250,5 @@ All requirements from PRODUCT.md have been implemented:
 The Deskboard MVP is complete and ready for use. All core features are implemented, documented, and functional. The application is safe, performant, and meets all requirements specified in PRODUCT.md.
 
 **Status**: ✅ Ready for testing and use
-**Version**: 1.0.0
-**Date**: October 2024
+**Version**: 0.1.0
+**Date**: October 2026

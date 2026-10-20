@@ -264,23 +264,14 @@ npm run dev
 
 ## Building for Production
 
-For distribution, use electron-builder:
+Create the Windows x64 NSIS installer and ZIP archive in `release/`:
 
 ```bash
-npm install --save-dev electron-builder
-
-# Add to package.json:
-"build": {
-  "appId": "com.deskboard.app",
-  "productName": "Deskboard",
-  "directories": {
-    "output": "dist"
-  }
-}
-
-# Build
-npm run build
+npm ci
+npm run dist
 ```
+
+Pushing a version tag such as `v0.1.0` runs `.github/workflows/release.yml`. The workflow requires the tag to match the package version, builds the same artifacts on GitHub Actions, and creates a draft GitHub release.
 
 ## License
 

@@ -1,20 +1,83 @@
 {
   "name": "deskboard",
-  "version": "1.0.0",
-  "description": "A desktop vision board application",
+  "version": "0.1.0",
+  "description": "A desktop vision board that stays visible without getting in your way",
   "main": "main.js",
   "scripts": {
     "start": "electron .",
-    "dev": "electron . --dev"
+    "dev": "electron . --dev",
+    "pack": "electron-builder --dir",
+    "dist": "electron-builder --publish never",
+    "release": "electron-builder --publish always"
   },
-  "keywords": ["vision-board", "desktop", "electron"],
-  "author": "",
+  "keywords": [
+    "vision-board",
+    "desktop",
+    "electron"
+  ],
+  "author": "nekoium",
   "license": "MIT",
+  "repository": {
+    "type": "git",
+    "url": "https://github.com/nekoium/deskboard.git"
+  },
+  "bugs": {
+    "url": "https://github.com/nekoium/deskboard/issues"
+  },
+  "homepage": "https://github.com/nekoium/deskboard#readme",
   "devDependencies": {
-    "electron": "^27.0.0"
+    "electron": "^27.0.0",
+    "electron-builder": "^26.15.3"
   },
   "dependencies": {
+    "auto-launch": "^5.0.6",
     "electron-store": "^8.1.0",
-    "auto-launch": "^5.0.6"
+    "uiohook-napi": "^1.5.5"
+  },
+  "build": {
+    "appId": "com.nekoium.deskboard",
+    "productName": "Deskboard",
+    "asar": true,
+    "npmRebuild": false,
+    "directories": {
+      "output": "release"
+    },
+    "files": [
+      "main.js",
+      "preload.js",
+      "src/**/*",
+      "build/icon.png",
+      "package.json"
+    ],
+    "win": {
+      "icon": "build/icon.ico",
+      "target": [
+        {
+          "target": "nsis",
+          "arch": [
+            "x64"
+          ]
+        },
+        {
+          "target": "zip",
+          "arch": [
+            "x64"
+          ]
+        }
+      ],
+      "artifactName": "${productName}-${version}-Windows-${arch}.${ext}"
+    },
+    "nsis": {
+      "oneClick": false,
+      "allowToChangeInstallationDirectory": true,
+      "createDesktopShortcut": false,
+      "createStartMenuShortcut": true
+    },
+    "publish": {
+      "provider": "github",
+      "owner": "nekoium",
+      "repo": "deskboard",
+      "releaseType": "draft"
+    }
   }
 }

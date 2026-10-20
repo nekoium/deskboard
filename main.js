@@ -4,11 +4,23 @@ const fs = require('fs');
 const Store = require('electron-store');
 const AutoLaunch = require('auto-launch');
 
+let uIOhook = null;
+let UiohookKey = null;
+try {
+  ({ uIOhook, UiohookKey } = require('uiohook-napi'));
+} catch (error) {
+  console.error('Global key release detection is unavailable:', error);
+}
+
 const store = new Store();
 let boardWindow = null;
 let settingsWindow = null;
 let tray = null;
 let isEditMode = false;
+let holdShortcutDown = false;
+let holdReleaseKeycodes = null;
+let inputHookStarted = false;
+let inputHookListenerAdded = false;
 
 const autoLauncher = new AutoLaunch({
   name: 'Deskboard',
@@ -67,23 +79,30 @@ function createBoardWindow() {
   });
 }
 
-function toggleEditMode() {
-  isEditMode = !isEditMode;
-  
+function setEditMode(enabled) {
+  if (isEditMode === enabled) return;
+
+  isEditMode = enabled;
+
   if (boardWindow) {
     boardWindow.setIgnoreMouseEvents(!isEditMode, { forward: true });
     boardWindow.webContents.send('toggle-edit-mode', isEditMode);
-    
-    if (isEditMode) {
-      // In edit mode: stay below normal windows but above desktop
-      boardWindow.setAlwaysOnTop(false);
-      boardWindow.focus();
-    } else {
-      // In normal mode: click-through, no focus
-      boardWindow.setAlwaysOnTop(false);
+    boardWindow.setAlwaysOnTop(false);
+
+    if (!isEditMode) {
       boardWindow.blur();
     }
   }
+}
+
+function toggleEditMode() {
+  setEditMode(!isEditMode);
+}
+
+function stopHoldInteraction() {
+  holdShortcutDown = false;
+  holdReleaseKeycodes = null;
+  setEditMode(false);
 }
 
 function createSettingsWindow() {
@@ -92,8 +111,10 @@ function createSettingsWindow() {
     return;
   }
 
-  // Unregister shortcuts while settings window is open
+  // Do not let the active shortcut fire while the user records a shortcut.
   globalShortcut.unregisterAll();
+  stopHoldInteraction();
+  stopInputHook();
 
   settingsWindow = new BrowserWindow({
     width: 500,
@@ -172,48 +193,122 @@ function createTray() {
 }
 
 function createTrayIcon() {
-  // Create a simple icon programmatically
   const { nativeImage } = require('electron');
-  
-  // Create a simple 16x16 icon using a base64 PNG
-  const buffer = Buffer.from(
-    'iVBORw0KGgoAAAANSUhEUgAAABAAAAAQCAYAAAAf8/9hAAAABHNCSVQICAgIfAhkiAAAAAlwSFlzAAAAdgAAAHYBTnsmCAAAABl0RVh0U29mdHdhcmUAd3d3Lmlua3NjYXBlLm9yZ5vuPBoAAABzSURBVDiNY2AYBaNgFFA' +
-    'GGBkZGf6DIQMDAwMjAwPDfzBmZGRkYGBgYGBkZGT4D8YMDAwMjIyMDP/BmJGRkYGBgYGBkZGR4T8YMzAwMDAyMjL8B2NGRkYGBgYGBkZGRob/YMzAwMDAyMjI8B+MGRkZGRgYBh8AAN5lB' +
-    'Ae/El3SAAAAAElFTkSuQmCC',
-    'base64'
-  );
-  return nativeImage.createFromBuffer(buffer);
+  return nativeImage
+    .createFromPath(path.join(__dirname, 'build', 'icon.png'))
+    .resize({ width: 16, height: 16 });
+}
+
+function getHoldReleaseKeycodes(shortcut) {
+  if (!UiohookKey) return null;
+
+  const aliases = {
+    Return: 'Enter',
+    Left: 'ArrowLeft',
+    Right: 'ArrowRight',
+    Up: 'ArrowUp',
+    Down: 'ArrowDown',
+  };
+  const modifierNames = new Set([
+    'commandorcontrol', 'cmdorctrl', 'command', 'cmd', 'control', 'ctrl',
+    'super', 'meta', 'alt', 'option', 'shift',
+  ]);
+  const parts = shortcut.split('+').filter(Boolean);
+  const mainPart = parts.findLast((part) => !modifierNames.has(part.toLowerCase()));
+  const mainKey = aliases[mainPart] || mainPart;
+  const mainKeycode = UiohookKey[mainKey];
+
+  if (mainKeycode === undefined) return null;
+
+  const keycodes = new Set([mainKeycode]);
+  for (const part of parts) {
+    switch (part.toLowerCase()) {
+      case 'commandorcontrol':
+      case 'cmdorctrl':
+        keycodes.add(process.platform === 'darwin' ? UiohookKey.Meta : UiohookKey.Ctrl);
+        keycodes.add(process.platform === 'darwin' ? UiohookKey.MetaRight : UiohookKey.CtrlRight);
+        break;
+      case 'control':
+      case 'ctrl':
+        keycodes.add(UiohookKey.Ctrl);
+        keycodes.add(UiohookKey.CtrlRight);
+        break;
+      case 'command':
+      case 'cmd':
+      case 'super':
+      case 'meta':
+        keycodes.add(UiohookKey.Meta);
+        keycodes.add(UiohookKey.MetaRight);
+        break;
+      case 'alt':
+      case 'option':
+        keycodes.add(UiohookKey.Alt);
+        keycodes.add(UiohookKey.AltRight);
+        break;
+      case 'shift':
+        keycodes.add(UiohookKey.Shift);
+        keycodes.add(UiohookKey.ShiftRight);
+        break;
+    }
+  }
+
+  return keycodes;
+}
+
+function startInputHook() {
+  if (!uIOhook || inputHookStarted) return;
+
+  if (!inputHookListenerAdded) {
+    uIOhook.on('keyup', (event) => {
+      if (holdShortcutDown && holdReleaseKeycodes?.has(event.keycode)) {
+        stopHoldInteraction();
+      }
+    });
+    inputHookListenerAdded = true;
+  }
+
+  uIOhook.start();
+  inputHookStarted = true;
+}
+
+function stopInputHook() {
+  if (!uIOhook || !inputHookStarted) return;
+  uIOhook.stop();
+  inputHookStarted = false;
 }
 
 function registerShortcut() {
   globalShortcut.unregisterAll();
+  stopHoldInteraction();
+
   const shortcut = store.get('shortcut', 'CommandOrControl+Shift+D');
   const holdMode = store.get('holdMode', false);
-  
-  if (holdMode) {
-    // Hold mode: activate on press, deactivate on release
-    const success = globalShortcut.register(shortcut, () => {
-      if (!isEditMode) {
-        toggleEditMode();
-      }
-    });
-    
-    if (!success) {
-      console.error('Failed to register shortcut:', shortcut);
-    }
-    
-    // Note: Electron doesn't support key release events for global shortcuts
-    // So hold mode works as: press to enter, press again to exit (same as toggle)
-    // True hold mode would require native modules
+  const releaseKeycodes = holdMode ? getHoldReleaseKeycodes(shortcut) : null;
+
+  if (holdMode && releaseKeycodes) {
+    startInputHook();
   } else {
-    // Toggle mode: press to toggle
-    const success = globalShortcut.register(shortcut, () => {
-      toggleEditMode();
-    });
-    
-    if (!success) {
-      console.error('Failed to register shortcut:', shortcut);
+    stopInputHook();
+    if (holdMode) {
+      console.error(`Hold mode does not support shortcut: ${shortcut}. Falling back to toggle mode.`);
     }
+  }
+
+  const success = globalShortcut.register(shortcut, () => {
+    if (holdMode && releaseKeycodes) {
+      if (!holdShortcutDown) {
+        holdShortcutDown = true;
+        holdReleaseKeycodes = releaseKeycodes;
+        setEditMode(true);
+      }
+      return;
+    }
+
+    toggleEditMode();
+  });
+
+  if (!success) {
+    console.error('Failed to register shortcut:', shortcut);
   }
 }
 
@@ -237,11 +332,8 @@ ipcMain.handle('get-settings', () => {
 });
 
 ipcMain.handle('save-settings', async (event, settings) => {
-  const oldShortcut = store.get('shortcut');
-  
-  if (settings.shortcut !== oldShortcut) {
+  if (settings.shortcut) {
     store.set('shortcut', settings.shortcut);
-    registerShortcut();
   }
 
   if (settings.launchAtLogin !== undefined) {
@@ -301,6 +393,7 @@ app.on('window-all-closed', (e) => {
 
 app.on('will-quit', () => {
   globalShortcut.unregisterAll();
+  stopInputHook();
 });
 
 app.on('before-quit', () => {
