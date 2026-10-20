@@ -1,12 +1,12 @@
 # Deskboard — Product Spec
 
-A tray application that displays images on the desktop layer, behind icons but above the wallpaper. The board stays click-through during normal use and becomes interactive when the user enters edit mode.
+A desktop vision board application that lives on your desktop layer — behind icons, above your wallpaper. Keep images that inspire or remind you visible throughout your day without covering your workspace. The board stays invisible to the mouse during normal use and becomes interactive when you enter edit mode.
 
 ## User experience
 
 ### Normal use
 
-The board displays images on the desktop. Desktop icons, file operations, and right-click context menus work normally. Clicks pass through the board to the desktop below.
+Your vision board displays images on the desktop throughout your workday. Desktop icons, file operations, and right-click context menus work normally. Clicks pass through the board to the desktop below. Your reminders and inspiration stay visible without interfering with your workflow.
 
 ### Edit mode
 
